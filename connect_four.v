@@ -1,6 +1,3 @@
-
-//再挑戦！！いけた？
-
 module COONECT_FOR (
     // クロック、リセット
     input CLK, SW9,
