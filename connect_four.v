@@ -1,3 +1,6 @@
+
+//変更の確認！！！できてるかーー？？？
+
 module COONECT_FOR (
     // クロック、リセット
     input CLK, SW9,
