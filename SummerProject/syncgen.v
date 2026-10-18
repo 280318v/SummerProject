@@ -1,5 +1,6 @@
 /*VGAの同期信号を出力する*/
 
+
 module SYNCGEN(
     input               CLK,
     input               RST,
