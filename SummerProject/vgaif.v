@@ -1,26 +1,10 @@
 module VGAIF(//ディスプレイ表示モジュール
-    input            PCK, RST, 
-
-    /*ctl_unitから入力されるゲームの状態の情報*/
-    input       [2:0] display_mode,
-
-    /* 同期信号 */
-    input   [9:0]   HCNT,
-    input   [9:0]   VCNT,
-    
-    //多次元配列の入出力は対応してない
-    input  [9:0] stage_1, stage_2, stage_3, stage_4, stage_5, stage_6, stage_7,
-                stage_8, stage_9, stage_10, stage_11, stage_12, stage_13, stage_14,
-                stage_15, stage_16, stage_17, stage_18, stage_19, stage_20,
-    
-    input  [9:0] coin_stage_1, coin_stage_2, coin_stage_3, coin_stage_4, coin_stage_5, coin_stage_6, coin_stage_7,
-                coin_stage_8, coin_stage_9, coin_stage_10, coin_stage_11, coin_stage_12, coin_stage_13, coin_stage_14,
-                coin_stage_15, coin_stage_16, coin_stage_17, coin_stage_18, coin_stage_19, coin_stage_20,
-
-    /* VGA出力 */
-    output  [3:0]   VGA_R,
-    output  [3:0]   VGA_G,
-    output  [3:0]   VGA_B
+    input               PCK, RST, 
+    input       [9:0]   HCNT,
+    input       [9:0]   VCNT,
+    output  reg [3:0]   VGA_R,
+    output  reg [3:0]   VGA_G,
+    output  reg [3:0]   VGA_B
 );
 
 /* VGA(640×480)用パラメータ読み込み */
