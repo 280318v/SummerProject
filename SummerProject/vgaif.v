@@ -1,25 +1,27 @@
-module VGAIF(//ディスプレイ表示モジュール
-    input               PCK, RST, 
+/* VGAのRGB信号を出力する */
+
+module VGAIF(
+    input               PCK,
+    input               RST,
     input       [9:0]   HCNT,
     input       [9:0]   VCNT,
-    output  reg [3:0]   VGA_R,
-    output  reg [3:0]   VGA_G,
-    output  reg [3:0]   VGA_B
+    input       [1:0]   stage_state,    // 画面の状態 (ctl_unitから)
+    input               turn,           // 0:1Pのターン(赤) 1:2Pのターン(青)
+    input       [9:0]   coin_x,         // 操作中コインの左上X (表示領域の座標)
+    input       [9:0]   coin_y,         // 操作中コインの左上Y (表示領域の座標)
+    input       [156:0] field1,         // 1Pのコイン配置 (1:コインあり)
+    input       [156:0] field2,         // 2Pのコイン配置 (1:コインあり)
+    output      [3:0]   VGA_R,
+    output      [3:0]   VGA_G,
+    output      [3:0]   VGA_B
 );
 
 /* VGA(640×480)用パラメータ読み込み */
 `include "vga_param.vh"
 
-wire signed [9:0] stage [19:0];
-
-integer i,j;
-
-/* 内部での参照用にカウント値を変換(表示データを用意する地点を0とする) */
-wire [9:0] iHCNT = HCNT - HFRONT - HWIDTH - HBACK;
-wire [9:0] iVCNT = VCNT - VFRONT - VWIDTH - VBACK;
-
-reg [9:0] hcntreg;
-reg [9:0] vcntreg;
+/* 表示領域の左上を(0,0)にした座標 */
+wire [9:0] iHCNT = HCNT - HBEGIN;
+wire [9:0] iVCNT = VCNT - VBEGIN;
 
 /*カラーカウント*/
 reg [2:0] color_cnt;
