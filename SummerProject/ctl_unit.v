@@ -6,20 +6,22 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
     //input   gameover_flag, gameclear_flag,
     //input   gameover2_flag, gameclear2_flag,
     //output  reg[2:0] current_mode,
-    output  display_mode,
-    output  reg startstop
+    output  [2:0]display_mode,
+    //output  reg startstop
 
     /*
-    p1_dec:3'b000
-    p1_left:3'b001
-    p1_down:3'b010
-    p1_right:3'b011
+    p1_no_input:4'b0000
+    p1_dec:4'b0001
+    p1_left:4'b0010
+    p1_down:4'b0011
+    p1_right:4'b0100
 
-    p2_dec:3'b100
-    p2_left:3'b101
-    p2_down:3'b110
-    p2_right:3'b111
-    
+    p2_no_input:4'b1000
+    p2_dec:4'b1001
+    p2_left:4'b1010
+    p2_down:4'b1011
+    p2_right:4'b1100
+
     KEY0:1'b0
     KEY1:1'b1
 
@@ -28,7 +30,38 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
     SW2:2'b11
     */
 );
+
+/*
+3’b000: タイトルセレクト画面
+3’b001:対戦画面
+3’b010:対戦結果画面1P
+3’b011:対戦結果画面2P
+*/
     always @* begin
+        if ((display_mode == 3'b000) && SW && (GPIO[2] || GPIO[12])) begin
+            display_mode <= 3'b001;
+        end
+        else if ((display_mode ==  3'b001) && (winner == 1)) begin
+            display_mode <= 3'b010;   
+        end 
+        else if ((display_mode ==  3'b001) && (winner == 2)) begin
+            display_mode <= 3'b011;
+        end
+        else if ((display_mode <= 3'b010) && (KEY == KEY[1])) begin
+            display_mode <= 3'b001;
+        end
+        else if ((display_mode <= 3'b010) && (KEY == KEY[0])) begin
+            display_mode <= 3'b000;
+        end
+        else if ((display_mode <= 3'b011) && (KEY == KEY[1])) begin
+            display_mode <= 3'b001;
+        end
+        else if ((display_mode <= 3'b011) && (KEY == KEY[0])) begin
+            display_mode <= 3'b000;
+        end
+        else begin
+            display_mode <= 3'b000;
+        end
     end
     
 endmodule
