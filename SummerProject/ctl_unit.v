@@ -1,8 +1,9 @@
 module CTL_UNIT( //ゲーム全体の制御部モジュール
     input   CLK, RST,
     input[3:0] BIN   //left1_btn, down1_btn, right1_btn, dec1_btn, left2_btn, down2_btn, right2_btn, dec2_btns,
-    input   KEY,
+    input   [1:0]KEY,
     input   [1:0] SW,
+    input [1:0] winner,
     //input   gameover_flag, gameclear_flag,
     //input   gameover2_flag, gameclear2_flag,
     //output  reg[2:0] current_mode,
@@ -38,29 +39,28 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
 3’b011:対戦結果画面2P
 */
     always @* begin
-        if ((display_mode == 3'b000) && SW && (GPIO[2] || GPIO[12])) begin
-            display_mode <= 3'b001;
-        end
-        else if ((display_mode ==  3'b001) && (winner == 1)) begin
-            display_mode <= 3'b010;   
-        end 
-        else if ((display_mode ==  3'b001) && (winner == 2)) begin
-            display_mode <= 3'b011;
-        end
-        else if ((display_mode <= 3'b010) && (KEY == KEY[1])) begin
-            display_mode <= 3'b001;
-        end
-        else if ((display_mode <= 3'b010) && (KEY == KEY[0])) begin
+        if (RST) begin
             display_mode <= 3'b000;
-        end
-        else if ((display_mode <= 3'b011) && (KEY == KEY[1])) begin
-            display_mode <= 3'b001;
-        end
-        else if ((display_mode <= 3'b011) && (KEY == KEY[0])) begin
-            display_mode <= 3'b000;
-        end
-        else begin
-            display_mode <= 3'b000;
+        end else begin
+            case (display_mode)
+                3'b000: begin
+                    if (SW != 2'b00 && ((BIN == 4'b0001) || (BIN == 4'b1001)))
+                        display_mode <= 3'b001;
+                end
+                3'b001: begin
+                    if(winner == 2'b01)
+                        display_mode <= 3'b010;
+                    else if(winner == 2'b10)
+                        display_mode <= 3'b011;
+                end
+                3'b010, 3'b011: begin
+                    if(KEY[1])
+                        display_mode <= 3'b001;
+                    else if(KEY[0])
+                        display_mode <= 3'b010;
+                end
+                default: display_mode <= 3'b000;
+            endcase
         end
     end
     
