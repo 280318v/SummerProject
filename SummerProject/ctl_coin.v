@@ -14,7 +14,7 @@ module CTL_COIN(CLK, RST, ctl, coin_state);
                 coin_state <= 2'b11;
             end
             default:begin
-                coin_state <= 2'b00;
+                coin_state <= 2'b01;
             end
         endcase
     end
