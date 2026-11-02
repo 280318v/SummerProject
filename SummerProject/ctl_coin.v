@@ -18,10 +18,10 @@ module CTL_COIN(CLK, RST, display_mode, BIN, coin_state, judge);
     p2_right:4'b1100
     */
     always @* begin 
-        coin_state = 2'b00;
+        coin_state <= 2'b00;
         if (display_mode == 3'b001) begin
             if (judge)    //勝利判定中
-                coin_stage <= 2'b11;
+                coin_state <= 2'b11;
             else begin
                 case(BIN)
                     4'b0000, 4'b1000:begin        //何もしてない状態
