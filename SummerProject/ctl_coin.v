@@ -18,11 +18,12 @@ module CTL_COIN(CLK, RST, display_mode, BIN, coin_state, judge);
     p2_right:4'b1100
     */
     always @* begin 
-        coin_state <= 2'b00;
+        coin_state = 2'b00;
         if (display_mode == 3'b001) begin
             if (judge)    //勝利判定中
                 coin_state <= 2'b11;
             else begin
+                //落下中以外に落下終了フラグのif文を追加して落下中は操作を受け付けなくした方がいいかも
                 case(BIN)
                     4'b0000, 4'b1000:begin        //何もしてない状態
                         coin_state <= 2'b00;

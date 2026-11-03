@@ -1,13 +1,13 @@
 module CTL_UNIT( //ゲーム全体の制御部モジュール
     input   CLK, RST,
-    input[3:0] BIN   //left1_btn, down1_btn, right1_btn, dec1_btn, left2_btn, down2_btn, right2_btn, dec2_btns,
+    input[3:0] BIN,   //left1_btn, down1_btn, right1_btn, dec1_btn, left2_btn, down2_btn, right2_btn, dec2_btns,
     input   [1:0]KEY,
     input   [1:0] SW,
     input [1:0] winner,
     //input   gameover_flag, gameclear_flag,
     //input   gameover2_flag, gameclear2_flag,
     //output  reg[2:0] current_mode,
-    output  [2:0]display_mode,
+    output  reg [2:0]display_mode
     //output  reg startstop
 
     /*
@@ -38,7 +38,7 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
 3’b010:対戦結果画面1P
 3’b011:対戦結果画面2P
 */
-    always @* begin
+    always @(posedge CLK) begin
         if (RST) begin
             display_mode <= 3'b000;
         end else begin
@@ -54,9 +54,9 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
                         display_mode <= 3'b011;
                 end
                 3'b010, 3'b011: begin
-                    if(KEY[1])
+                    if(KEY[1] == 1'b0)//if(KEY[1])
                         display_mode <= 3'b001;
-                    else if(KEY[0])
+                    else if(KEY[0] == 1'b0)//else if(KEY[0])
                         display_mode <= 3'b010;
                 end
                 default: display_mode <= 3'b000;
