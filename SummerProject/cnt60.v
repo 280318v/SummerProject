@@ -60,7 +60,7 @@ module COUNT60(CLK, RST, CLR, EN, QH, QL, SW, turn_flag, Time, KEY);
     end
 
     //FOR TEST
-    assign turn_flag = ~KEY;
+    //assign turn_flag = ~KEY;
     // always @* begin
     //     if(KEY) begin
     //         turn_flag <= 1;
