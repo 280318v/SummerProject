@@ -1,111 +1,124 @@
 /* VGAのRGB信号を出力する */
 
 module VGAIF(
-    input               PCK,
-    input               RST,
-    input       [9:0]   HCNT,
-    input       [9:0]   VCNT,
-    input       [2:0]   stage_state,    // 画面の状態 (ctl_unitから)
-    input               turn,           // 0:1Pのターン(赤) 1:2Pのターン(青)
-    input       [9:0]   coin_x,         // 操作中コインの左上X (表示領域の座標)
-    input       [9:0]   coin_y,         // 操作中コインの左上Y (表示領域の座標)
-    input       [156:0] field1,         // 1Pのコイン配置 (1:コインあり)
-    input       [156:0] field2,         // 2Pのコイン配置 (1:コインあり)
-    output      [3:0]   VGA_R,
-    output      [3:0]   VGA_G,
-    output      [3:0]   VGA_B
+    input            PCK, RST,
+
+    /* 同期信号 (syncgen.v から) */
+    input   [9:0]    HCNT,
+    input   [9:0]    VCNT,
+
+    /* field_update.v から */
+    input   [41:0]   field1,      // プレイヤー1のコイン  idx = row*7 + col
+    input   [41:0]   field2,      // プレイヤー2のコイン
+    input            turn,        // 0=プレイヤー1 / 1=プレイヤー2 (動くコインの色)
+    input   [2:0]    cur_col,     // 上の段で待っている列
+    input   [8:0]    fall_y,      // 落下量[px]
+    input            mv_show,     // 動くコインを描くか
+
+    /* VGA出力 */
+    output  [3:0]    VGA_R,
+    output  [3:0]    VGA_G,
+    output  [3:0]    VGA_B
 );
 
 /* VGA(640×480)用パラメータ読み込み */
 `include "vga_param.vh"
 
-/* 表示領域の左上を(0,0)にした座標 */
+/* 表示領域の左上を (0,0) とした座標 */
 wire [9:0] iHCNT = HCNT - HBEGIN;
 wire [9:0] iVCNT = VCNT - VBEGIN;
 
-/* RGB出力信号 */
-reg [11:0] vga_rgb;
+/* ---------------- レイアウト ---------------- */
+localparam [9:0] LINE    = 10'd2;       // 線の太さ
+localparam [9:0] INNER   = 10'd37;      // マスの中身
+localparam [9:0] PITCH   = 10'd39;      // マスの間隔 = 線2 + 中身37
+localparam [9:0] COIN_D  = 10'd35;      // コイン直径
+localparam [9:0] COIN_OFF= 10'd3;       // マスの左上(線の外側)からコイン左上まで = 線2 + 隙間1
+localparam [9:0] BOARD_X = 10'd182;     // 盤面の左端  ((640-275)/2 ≒ 182)
+localparam [9:0] BOARD_Y = 10'd140;     // 盤面の上端  (上のコイン段 37px を含めて縦中央に配置)
+localparam [9:0] BOARD_W = 10'd275;     // 39*7 + 2
+localparam [9:0] BOARD_H = 10'd236;     // 39*6 + 2
+localparam [9:0] LANE_Y  = BOARD_Y - INNER + 10'd1;   // 上の段にあるコインの上端 (中身37の1px内側)
 
-/* 画面の状態 */
-localparam  SELECT = 3'b000, PLAY = 3'b001, WIN1 = 3'b010, WIN2 = 3'b011;
+/* ---------------- 色 ---------------- */
+localparam [11:0] COL_BLACK = 12'h000,
+                  COL_BOARD = 12'h00A,      // 盤面の青
+                  COL_LINE  = 12'hFFF,      // 線 (白)
+                  COL_P1    = 12'hF00,      // プレイヤー1 (赤)
+                  COL_P2    = 12'hFF0;      // プレイヤー2 (黄)
 
-/* 色 (RGB 各4bit) */
-localparam red = 12'hf00, blue = 12'h00f, white = 12'hfff, black = 12'h000;
-
-/* 盤面の寸法 */
-localparam LINE    = 10'd2;     // 線の太さ
-localparam PITCH   = 10'd39;    // 1マスの周期 (37 + 2)
-localparam BOARD_X = 10'd182;   // 盤面左上のX
-localparam BOARD_Y = 10'd160;   // 盤面左上のY (上にコイン用の余白)
-localparam BOARD_W = 10'd275;   // 39*7 + 2
-localparam BOARD_H = 10'd236;   // 39*6 + 2
-localparam COIN_D  = 10'd35;    // コイン直径
-
-// ===========================================================
-//  コインの形 (直径35pxの円)
-//  lx, ly : コイン左上を(0,0)にした座標 (0〜34)
-// ===========================================================
-function is_coin_shape;
+/* ---------------- 円形判定 (直径35px) ----------------
+ * マス内座標 lx,ly は 0〜34。中心 (17,17) からの距離^2 が 306 (=17.5^2) 以下なら円の中。
+ */
+function in_circle;
     input [5:0] lx, ly;
+    reg   [5:0]  ax, ay;
+    reg   [10:0] d2;
     begin
-        case(ly)
-            6'd0, 6'd34: is_coin_shape = (lx >= 13 && lx <= 21); // 幅9
-            6'd1, 6'd33: is_coin_shape = (lx >= 10 && lx <= 24); // 幅15
-            6'd2, 6'd32: is_coin_shape = (lx >= 8 && lx <= 26); // 幅19
-            6'd3, 6'd31: is_coin_shape = (lx >= 7 && lx <= 27); // 幅21
-            6'd4, 6'd30: is_coin_shape = (lx >= 6 && lx <= 28); // 幅23
-            6'd5, 6'd29: is_coin_shape = (lx >= 5 && lx <= 29); // 幅25
-            6'd6, 6'd28: is_coin_shape = (lx >= 4 && lx <= 30); // 幅27
-            6'd7, 6'd27: is_coin_shape = (lx >= 3 && lx <= 31); // 幅29
-            6'd8, 6'd26: is_coin_shape = (lx >= 2 && lx <= 32); // 幅31
-            6'd9, 6'd25: is_coin_shape = (lx >= 2 && lx <= 32); // 幅31
-            6'd10, 6'd24: is_coin_shape = (lx >= 1 && lx <= 33); // 幅33
-            6'd11, 6'd23: is_coin_shape = (lx >= 1 && lx <= 33); // 幅33
-            6'd12, 6'd22: is_coin_shape = (lx >= 1 && lx <= 33); // 幅33
-            6'd13, 6'd21: is_coin_shape = (lx >= 0 && lx <= 34); // 幅35
-            6'd14, 6'd20: is_coin_shape = (lx >= 0 && lx <= 34); // 幅35
-            6'd15, 6'd19: is_coin_shape = (lx >= 0 && lx <= 34); // 幅35
-            6'd16, 6'd18: is_coin_shape = (lx >= 0 && lx <= 34); // 幅35
-            default:     is_coin_shape = (lx >= 0 && lx <= 34); // 幅35 (y=17)
-        endcase
+        ax = (lx >= 6'd17) ? (lx - 6'd17) : (6'd17 - lx);
+        ay = (ly >= 6'd17) ? (ly - 6'd17) : (6'd17 - ly);
+        d2 = ax * ax + ay * ay;
+        in_circle = (d2 <= 11'd306);
     end
 endfunction
 
-// ===========================================================
-//  盤面の線
-// ===========================================================
-wire in_board = (BOARD_X <= iHCNT && iHCNT < BOARD_X + BOARD_W) &&
-                (BOARD_Y <= iVCNT && iVCNT < BOARD_Y + BOARD_H);
+/* ---------------- 盤面 (線・置かれたコイン) ---------------- */
+wire in_board = (iHCNT >= BOARD_X) && (iHCNT < BOARD_X + BOARD_W) &&
+                (iVCNT >= BOARD_Y) && (iVCNT < BOARD_Y + BOARD_H);
 
-wire [9:0] bx = iHCNT - BOARD_X;        // 盤面左上を原点にした座標
+wire [9:0] bx = iHCNT - BOARD_X;        // 盤面内の相対座標
 wire [9:0] by = iVCNT - BOARD_Y;
 
-wire [9:0] col = bx / PITCH;            // 何列目か (0〜6)
-wire [9:0] row = by / PITCH;            // 何行目か (0〜5)
-wire [9:0] lx  = bx % PITCH;            // マス内のX (0〜38) 0,1は線
-wire [9:0] ly  = by % PITCH;            // マス内のY (0〜38) 0,1は線
+wire [9:0] cx = bx / PITCH;             // 列番号 (0〜7, 7は右端の線)
+wire [9:0] cy = by / PITCH;             // 行番号 (0〜6, 6は下端の線)
+wire [5:0] px = bx % PITCH;             // マス内の位置 (0〜38) 0,1=線 / 2=隙間 / 3〜37=コイン / 38=隙間
+wire [5:0] py = by % PITCH;
 
-wire border = in_board && (lx < LINE || ly < LINE);
+wire grid_line = in_board && ((px < 6'd2) || (py < 6'd2));
 
-// ===========================================================
-//  置かれたコイン (field1, field2)
-//
-//  field は 13列×12行 (157bit) で、画面に見える6行×7列の外側に
-//  上下左右3マスずつの余白がある (4つ揃い判定用)。
-//    画面の(行r, 列c) → 添え字 = (r+3)*13 + (c+3)
-//    例: 左上(0,0)=42, 右上(0,6)=48, 左下(5,0)=107, 右下(5,6)=113
-// ===========================================================
-wire [9:0] cell_idx = (row + 10'd3) * 10'd13 + (col + 10'd3);
+// コインの外接四角形 (px,py が 3〜37 の 35x35)
+wire cell_in  = in_board && (px >= 6'd3) && (px <= 6'd37) && (py >= 6'd3) && (py <= 6'd37)
+                         && (cx < 10'd7) && (cy < 10'd6);
+wire [5:0] lx = px - 6'd3;              // コインの中の座標 (0〜34)
+wire [5:0] ly = py - 6'd3;
+wire [5:0] idx = cy[2:0] * 6'd7 + cx[2:0];   // field の何ビット目か
 
-// マスの中(線を除く37x37)で、コイン(35x35)は1px内側に置く
-wire in_cell_coin = (10'd3 <= lx && lx <= 10'd37) && (10'd3 <= ly && ly <= 10'd37);
-wire [9:0] cx = lx - 10'd3;             // コイン左上を原点にした座標
-wire [9:0] cy = ly - 10'd3;
+wire coin_shape = in_circle(lx, ly);
+wire placed_p1  = cell_in && coin_shape && field1[idx];
+wire placed_p2  = cell_in && coin_shape && field2[idx];
 
-wire fixed_shape = in_board && !border && in_cell_coin && is_coin_shape(cx[5:0], cy[5:0]);
+/* ---------------- 横移動・落下中のコイン ---------------- */
+wire [9:0] mv_x0 = BOARD_X + {7'd0, cur_col} * PITCH + COIN_OFF;   // コインの左端
+wire [9:0] mv_y0 = LANE_Y + {1'b0, fall_y};                    // コインの上端
 
-wire p1_coin = fixed_shape && field1[cell_idx];
-wire p2_coin = fixed_shape && field2[cell_idx];
+wire mv_in_x = (iHCNT >= mv_x0) && (iHCNT < mv_x0 + COIN_D);
+wire mv_in_y = (iVCNT >= mv_y0) && (iVCNT < mv_y0 + COIN_D);
+wire [5:0] mlx = iHCNT - mv_x0;
+wire [5:0] mly = iVCNT - mv_y0;
 
+wire mv_coin = mv_show && mv_in_x && mv_in_y && in_circle(mlx, mly);
+
+/* ---------------- RGB出力 ---------------- */
+reg [11:0] vga_rgb;
+
+always @(posedge PCK) begin
+    if (RST) begin
+        vga_rgb <= COL_BLACK;
+    end
+    // ★ここにタイトル/勝利画面を追加 (例: else if (current_mode == TITLE) begin ... end)
+    else begin
+        // 優先度が高いものから上に置く
+        if (grid_line)                  vga_rgb <= COL_LINE;
+        else if (placed_p1)             vga_rgb <= COL_P1;
+        else if (placed_p2)             vga_rgb <= COL_P2;
+        else if (mv_coin)               vga_rgb <= turn ? COL_P2 : COL_P1;
+        else if (in_board)              vga_rgb <= COL_BOARD;
+        else                            vga_rgb <= COL_BLACK;
+    end
+end
+
+assign VGA_R = vga_rgb[11:8];
+assign VGA_G = vga_rgb[7:4];
+assign VGA_B = vga_rgb[3:0];
 
 endmodule
