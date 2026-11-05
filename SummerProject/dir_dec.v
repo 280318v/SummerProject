@@ -4,6 +4,7 @@ module DIR_DEC( //コインの制御モジュール
     input[1:0] stage_state,
     input  [2:0] SW,
     input  EN1HZ,
+    //input coin_state, //入力を受け付けるかどうかを決める（game_ctlからの入力)
     output reg signed[1:0] out_x, //x = {+1, -1}
     output reg signed[1:0] out_y  //y = {+1, -1}
 );

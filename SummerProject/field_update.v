@@ -13,7 +13,7 @@ module FIELD_UPDATE( //ゲーム本体モジュール 未完成
 
     output wire [156:0] field1,
     output wire [156:0] field2,
-    output reg  [1:0] coinnumber, //コインの種類\
+    output reg  [1:0] coinnumber, //コインの種類
 
 );
 

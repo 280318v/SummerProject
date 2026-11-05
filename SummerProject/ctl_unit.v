@@ -3,7 +3,7 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
     input[3:0] BIN,   //left1_btn, down1_btn, right1_btn, dec1_btn, left2_btn, down2_btn, right2_btn, dec2_btns,
     input   [1:0]KEY,
     input   [1:0] SW,
-    input [1:0] winner,
+    input [1:0] winner_flag,
     //input   gameover_flag, gameclear_flag,
     //input   gameover2_flag, gameclear2_flag,
     //output  reg[2:0] current_mode,
@@ -48,9 +48,9 @@ module CTL_UNIT( //ゲーム全体の制御部モジュール
                         display_mode <= 3'b001;
                 end
                 3'b001: begin
-                    if(winner == 2'b01)
+                    if(winner_flag == 2'b01)
                         display_mode <= 3'b010;
-                    else if(winner == 2'b10)
+                    else if(winner_flag == 2'b10)
                         display_mode <= 3'b011;
                 end
                 3'b010, 3'b011: begin
