@@ -1,19 +1,11 @@
 module BTN_IN(
-    //一人プレイ
     input CLK, RST,
     input       [12:0] nBIN, //4botton*2,SW0,1,2,KEY0,1
     output reg  [12:0] BOUT, //4botton*2,SW0,1,2, KEY0,1
     output [7:0] LEDR
-    /*LEDR
-    「現在プレイヤーがスイッチやボタンを押しているかどうか」
-    を実機の赤色LEDを点滅させて目視確認（デバッグ）するための出力*/
 );
-
-    /*50MHzを1,250,000分周して40Hzを作る*/
-    /*en40hzはシステムクロック1周期分のバルスで40Hz*/
     reg[20:0] cnt;
-    wire en40hz = (cnt==1250000 - 1);////ボタン入力を40Hzでチェックする, wireなので0に戻すコードは不要
-    //wire en40hz = (cnt == 5 - 1); //カウントを表すために-1する．
+    wire en40hz = (cnt==1250000 - 1);
 
     always @( posedge CLK ) begin
         if(RST)
@@ -24,8 +16,6 @@ module BTN_IN(
             cnt <= cnt + 21'b1;
     end
 
-    /*ボタン入力をFF2個で受けることでCLKを受けたときに信号を出力（同期）できる*/
-    /*ボタン入力が13bitなのでFFも13bit*/
     reg[12:0] ff1, ff2;
 
     always @( posedge CLK ) begin
