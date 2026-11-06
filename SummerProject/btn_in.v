@@ -49,6 +49,6 @@ module BTN_IN(
         else
             BOUT <= temp; //BOUT[12:5], SW[2:0], KEY[1:0]
     end
-
-    assign LEDR[7:0] = temp[12:5];
+       // 押している間だけ点灯 (押すと0なので ~ で反転)
+       assign LEDR[7:0] = ~ff1[12:5];
 endmodule
