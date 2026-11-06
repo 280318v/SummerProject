@@ -1,4 +1,4 @@
-m/*
+/*
  * field_update.v  ―  コネクトフォーのゲーム本体
  *
  * 盤面は 6行 x 7列 = 42マス。1マス1ビットで、プレイヤーごとに 42bit で覚えます。
@@ -27,7 +27,7 @@ module field_update #(
 
     input      [1:0]  dir_x,        // dir_dec から: 01=右, 11=左, 00=なし
     input             drop,         // dir_dec から: 落とす
-    input             tick_10ms,    // 10msごとの信号 (落下速度用)
+    input             tick_10ms,    // 10msごとに1クロックだけ1になる信号 (落下速度用)
     input      [1:0]  winner,       // winner_ctl から: 00=なし / 01=P1の勝ち / 10=P2の勝ち
 
     output reg [41:0] field1,       // プレイヤー1のコイン
@@ -51,13 +51,9 @@ reg [1:0] state;
 reg [8:0] target_y;                 // 着地するまでの落下量[px]
 reg [2:0] land_row;                 // 着地する行
 reg [2:0] judge_cnt;
-reg       tick_prev;
 
 assign mv_show  = (state == S_MOVE) || (state == S_FALL);
 assign game_end = (state == S_END);
-
-// 10msの信号の立ち上がり (パルスでも、レベル信号でも動く)
-wire tick_pulse = tick_10ms & ~tick_prev;
 
 // どちらかのコインがあるマス
 wire [41:0] occupied = field1 | field2;
@@ -85,8 +81,6 @@ wire [41:0] land_mask = 42'd1 << land_idx;
 wire [9:0] fall_next = {1'b0, fall_y} + FALL_SPEED;
 
 always @(posedge CLK) begin
-    tick_prev <= tick_10ms;
-
     if (RST || !game_run) begin
         field1    <= 42'd0;
         field2    <= 42'd0;
@@ -122,7 +116,7 @@ always @(posedge CLK) begin
 
         // ---------- 落下 (10msごとに動く) ----------
         S_FALL: begin
-            if (tick_pulse) begin
+            if (tick_10ms) begin
                 if (fall_next >= {1'b0, target_y}) begin
                     // 着地: 着地行を越えないようにぴったり止めて、盤面に記録
                     fall_y <= target_y;
