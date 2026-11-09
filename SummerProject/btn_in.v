@@ -5,6 +5,7 @@ module BTN_IN(
     output [7:0] LEDR
 );
     reg[20:0] cnt;
+    // 25msごと
     wire en40hz = (cnt==1250000 - 1);
 
     always @( posedge CLK ) begin
