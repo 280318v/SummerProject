@@ -251,10 +251,10 @@ module WINNER_TURN_CTL (
         end
     end
 
-    always @* begin
-        if (winner != 2'b00)
-            winner_done = 1'b1;
-        else
-            winner_done = 1'b0;
+    always @(posedge CLK) begin
+        if (RST)
+            winner_done <= 1'b0;
+        else if (winner != 2'b00)
+            winner_done <= 1'b1;
     end
 endmodule
