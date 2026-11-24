@@ -5,7 +5,8 @@ module WINNER_TURN_CTL (
     input      [7:0]  i,        
     input      [155:0] field1,
     input      [155:0] field2,
-    output reg [1:0]  winner    // 01: P1, 10: P2
+    output reg [1:0]  winner,    // 01: P1, 10: P2
+    output reg winner_done
 );
 
     wire valid_i =
@@ -248,5 +249,12 @@ module WINNER_TURN_CTL (
 
             end
         end
+    end
+
+    always @* begin
+        if (winner != 2'b00)
+            winner_done = 1'b1;
+        else
+            winner_done = 1'b0;
     end
 endmodule
